@@ -4,6 +4,10 @@ const db = require("../models/index.js");
 const User = db.user;
 
 verifyToken = (req, res, next) => {
+	const authHeader = req.header("Authorization");
+	if (!authHeader) {
+		return res.status(403).send({ message: "No token provided!" });
+	}
 	let token = req.header("Authorization").split(" ")[1];
 	if (!token) {
 		return res.status(403).send({
@@ -23,70 +27,36 @@ verifyToken = (req, res, next) => {
 	});
 };
 
-isAdmin = async (req, res, next) => {
-	try {
-		const user = await User.findByPk(req.userId);
-		const roles = await user.getRoles();
-		for (let i = 0; i < roles.length; i++) {
-			if (roles[i].name === "admin") {
-				return next();
+const checkRole = (requiredRole) => {
+	return async (req, res, next) => {
+		try {
+			const user = await User.findByPk(req.userId);
+			if (!user) {
+				return res.status(404).send({ message: "User not found!" });
 			}
-		}
-		return res.status(403).send({
-			message: "Require Admin Role!"
-		});
-	} catch (error) {
-		return res.status(500).send({
-			message: "Unable to validate User role!"
-		});
-	}
-};
 
-isModerator = async (req, res, next) => {
-	try {
-		const user = await User.findByPk(req.userId);
-		const roles = await user.getRoles();
-		for (let i = 0; i < roles.length; i++) {
-			if (roles[i].name === "moderator") {
-				return next();
+			const role = await user.role();
+			if (!role) {
+				return res.status(404).send({ message: "Role not assigned!" });
 			}
-		}
-		return res.status(403).send({
-			message: "Require Moderator Role!"
-		});
-	} catch (error) {
-		return res.status(500).send({
-			message: "Unable to validate Moderator role!"
-		});
-	}
-};
 
-isModeratorOrAdmin = async (req, res, next) => {
-	try {
-		const user = await User.findByPk(req.userId);
-		const roles = await user.getRoles();
-		for (let i = 0; i < roles.length; i++) {
-			if (roles[i].name === "moderator") {
+			if (role.toLowerCase() === requiredRole.toLowerCase()) {
 				return next();
 			}
-			if (roles[i].name === "admin") {
-				return next();
-			}
+
+			return res.status(403).send({ message: `Require ${requiredRole} Role!` });
+		} catch (error) {
+			console.error(error);
+			return res.status(500).send({ message: "Unable to validate User role!" });
 		}
-		return res.status(403).send({
-			message: "Require Moderator or Admin Role!"
-		});
-	} catch (error) {
-		return res.status(500).send({
-			message: "Unable to validate Moderator or Admin role!"
-		});
-	}
+	};
 };
 
 const authJwt = {
 	verifyToken,
-	isAdmin,
-	isModerator,
-	isModeratorOrAdmin
+	isAdmin: checkRole("admin"),
+	isStudent: checkRole("student"),
+	isRecruiter: checkRole("recruiter"),
+	isPlacementCell: checkRole("placementCell")
 };
 module.exports = authJwt;
