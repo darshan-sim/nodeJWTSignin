@@ -1,13 +1,11 @@
 const express = require("express");
-// const bodyParser = require("body-parser");
 
 const app = express();
 app.use(express.json());
-// app.use(bodyParser.json());
-// app.use(bodyParser.urlencoded({ extended: true }));
 
-// require("./app/routes/auth.routes")(app);
+require("./app/routes/auth.routes")(app);
 require("./app/routes/user.routes")(app);
+require("./app/routes/placementCell.routes")(app);
 
 app.get("/", (req, res) => {
 	res.send("Hello User!");
@@ -16,7 +14,6 @@ app.get("/", (req, res) => {
 app.listen(3000);
 
 const db = require("./app/models");
-const Role = db.role;
 
 // db.sequelize.sync({ force: true }).then(() => {
 // 	console.log("Drop and Resync Db");

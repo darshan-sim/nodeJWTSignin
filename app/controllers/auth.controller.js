@@ -3,19 +3,44 @@ const config = require("../config/auth.config");
 const User = db.user;
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
+const { createPlacementCell } = require("../services/placementCell.service");
 
 exports.signup = async (req, res) => {
 	try {
-		const user = await User.create({
-			username: req.body.username,
-			email: req.body.email,
-			password: bcrypt.hashSync(req.body.password, 8),
-			role: req.body.role,
-			isActive: "false"
-		});
+		const t = await db.sequelize.transaction();
+		const user = await User.create(
+			{
+				username: req.body.username,
+				email: req.body.email,
+				password: bcrypt.hashSync(req.body.password, 8),
+				role: req.body.role,
+				isActive: "false"
+			},
+			{ transaction: t }
+		);
+		console.log(user);
+
 		if (!user) {
 			res.status(500).send({ message: "Can't create user" });
 		}
+
+		const role = user.role;
+		switch (role) {
+			case "placementCellAdmin":
+				const data = {
+					adminId: user.userId,
+					name: req.body.placementCellName,
+					email: req.body.placementCellEmail
+				};
+				console.log(data);
+				console.log(req.body);
+				const placementCell = await createPlacementCell(data, t);
+				if (!placementCell) {
+					res.status(500).send({ message: "Can't create PlacementCell" });
+				}
+				break;
+		}
+		await t.commit();
 		res.send({ message: "User registered successfully!" });
 	} catch (error) {
 		console.error(error);
@@ -42,7 +67,7 @@ exports.signin = async (req, res) => {
 				message: "Invalid Password!"
 			});
 		}
-		const token = jwt.sign({ id: user.id }, config.secret, {
+		jwt.sign({ userId: user.userId }, config.secret, {
 			expiresIn: 86400 // 24 hours
 		});
 		// req.session.token = token;

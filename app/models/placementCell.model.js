@@ -1,8 +1,19 @@
 module.exports = (sequelize, Sequelize) => {
-	const User = sequelize.define("placement_cells", {
+	const PlacementCell = sequelize.define("placement_cells", {
 		placementCellId: {
-			type: Sequelize.STRING,
+			type: Sequelize.INTEGER,
+			autoIncrement: true,
 			primaryKey: true
+		},
+		adminId: {
+			type: Sequelize.INTEGER,
+			allowNull: false,
+			references: {
+				model: "users",
+				key: "userId"
+			},
+			onUpdate: "CASCADE",
+			onDelete: "RESTRICT"
 		},
 		name: {
 			type: Sequelize.STRING
@@ -14,5 +25,5 @@ module.exports = (sequelize, Sequelize) => {
 			type: Sequelize.STRING
 		}
 	});
-	return User;
+	return PlacementCell;
 };
